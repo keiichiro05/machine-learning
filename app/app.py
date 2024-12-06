@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from paddleocr import PaddleOCR
+# from paddle
 import numpy as np
 import cv2
 import re
