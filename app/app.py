@@ -73,6 +73,7 @@ class NutritionFactExtractor:
         return result[0]
     
     def find_nutrition_value_units(self, text, *keywords):
+        print()
         for keyword in keywords[0]:
             for j, line in enumerate(text):
                 line[1] = (line[1][0].lower(), line[1][1])
@@ -98,36 +99,51 @@ class NutritionFactExtractor:
         return [0.0, '']
     
     def get_100_g_scale(self, nutrition_value_units):
-        return 100/nutrition_value_units['serving_size'][0]
+        if nutrition_value_units['serving_size'][0] != 0:
+            return 100/nutrition_value_units['serving_size'][0]
+        else: return 1
+        
     
-    def get_nutrition_value(self, nutrition_value_units, scaled_nutrition):
+    def get_nutrition_value(self, nutrition_value_units, nutrition_scale):
+        scaled_extracted_nutrition_value = {}
         extracted_nutrition_value = {}
         for nutrition, value in nutrition_value_units.items():
-            if nutrition == 'calories' and (value[1]=='kkal' or value[1]=='kcal'):
-                extracted_nutrition_value[nutrition] = round(value[0]*4.184, 3)*scaled_nutrition
+            if nutrition == 'calories':
+                if value[1]=='kkal' or value[1]=='kcal':
+                    scaled_extracted_nutrition_value[nutrition] = round(value[0]*4.184, 3)*nutrition_scale
+                    extracted_nutrition_value[nutrition] = value[0]
+                else:
+                    scaled_extracted_nutrition_value[nutrition] = value[0]*nutrition_scale
+                    extracted_nutrition_value[nutrition] = round(value[0]/4.184, 1)
             elif value[1]=='mg':
-                extracted_nutrition_value[nutrition] = (value[0]/1000)*scaled_nutrition
+                scaled_extracted_nutrition_value[nutrition] = (value[0]/1000)*nutrition_scale
+                extracted_nutrition_value[nutrition] = value[0]/1000
             elif value[1]=='':
                 if nutrition == 'fiber' and 'total_carbohydrate' in nutrition_value_units and 'sugar' in nutrition_value_units:
-                    extracted_nutrition_value[nutrition] = (nutrition_value_units['total_carbohydrate'][0] - nutrition_value_units['sugar'][0])*scaled_nutrition
-                else: extracted_nutrition_value[nutrition] = value[0]*scaled_nutrition
-            else: extracted_nutrition_value[nutrition] = value[0]*scaled_nutrition
-        return extracted_nutrition_value
+                    scaled_extracted_nutrition_value[nutrition] = (nutrition_value_units['total_carbohydrate'][0] - nutrition_value_units['sugar'][0])*nutrition_scale
+                    extracted_nutrition_value[nutrition] = (nutrition_value_units['total_carbohydrate'][0] - nutrition_value_units['sugar'][0])
+                    continue
+                scaled_extracted_nutrition_value[nutrition] = value[0]*nutrition_scale
+                extracted_nutrition_value[nutrition] = value[0]
+            else:
+                scaled_extracted_nutrition_value[nutrition] = value[0]*nutrition_scale
+                extracted_nutrition_value[nutrition] = value[0]
+        return extracted_nutrition_value, scaled_extracted_nutrition_value
     
-    def count_nutri_score(self, extracted_nutrition_value):
+    def count_nutri_score(self, extracted_nutrition_value, scaled_extracted_nutrition_value):
         nutri_score = 0
         nutrition_value = self.nutrition_value
 
-        for nutrition, value in extracted_nutrition_value.items():
+        for nutrition, value in scaled_extracted_nutrition_value.items():
             if nutrition in self.negative_quantization:
-                nutrition_value.update({nutrition:value})
+                nutrition_value.update({nutrition:extracted_nutrition_value[nutrition]})
                 for i, limit in enumerate(self.negative_quantization[nutrition]):
                     if value <= limit:
                         nutri_score += i
                         break
                     elif i == len(self.negative_quantization[nutrition])-1: nutri_score += i+1
             if nutrition in self.positive_quatization:
-                nutrition_value.update({nutrition:value})
+                nutrition_value.update({nutrition:extracted_nutrition_value[nutrition]})
                 for i, limit in enumerate(self.positive_quatization[nutrition]):
                     if value <= limit:
                         nutri_score -= i
@@ -162,9 +178,9 @@ async def prediction(file: UploadFile = File(...)):
         for nutrient, variations in nutrition_fact_extractor.nutrition_keyword_units.items():
             value = nutrition_fact_extractor.find_nutrition_value_units(img_text, *variations)
             nutrient_value_units[nutrient] = value
-        scaled_nutrition = nutrition_fact_extractor.get_100_g_scale(nutrient_value_units)
-        extracted_nutrition_value = nutrition_fact_extractor.get_nutrition_value(nutrient_value_units, scaled_nutrition)
-        nutrition_value, nutriscore = nutrition_fact_extractor.count_nutri_score(extracted_nutrition_value)
+        nutrition_scale = nutrition_fact_extractor.get_100_g_scale(nutrient_value_units)
+        extracted_nutrition_value, scaled_extracted_nutrition_value = nutrition_fact_extractor.get_nutrition_value(nutrient_value_units, nutrition_scale)
+        nutrition_value, nutriscore = nutrition_fact_extractor.count_nutri_score(extracted_nutrition_value, scaled_extracted_nutrition_value)
         grade = nutrition_fact_extractor.get_grade(nutriscore)
         nutrition_value.update({'nutriscore': nutriscore})
         nutrition_value.update({'grade': grade})
