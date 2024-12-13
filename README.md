@@ -1,5 +1,8 @@
 # 🤖 Machine-Learning - OCR Module
-<div align="center"> <img src="https://github.com/Capstone-Project-C242-PS120/.profile/blob/bd9319483144e642274d5ca0f2a9b2594625ce89/assets/SiTeja_logo.png" alt="SiTeja Logo" width="300"> </div> <h1 align="center">TEJA - Teman Jajan</h1>
+<div align="center">
+  <img src="https://github.com/Capstone-Project-C242-PS120/.github/blob/c711f73cbe5c263ac1b8b061312c44317fd056de/assets/SiTeja%20icon.png" alt="SiTeja Logo" width="300" />
+  <h1>Teja: Where Tasty Meets Healthy!</h1>
+</div>
 📖 Introduction
 The OCR Module of TEJA - Teman Jajan is a critical component designed to extract nutritional information from food packaging with high precision. This feature utilizes PaddleOCR, a state-of-the-art Optical Character Recognition tool, to seamlessly process text and make it accessible for further analysis.
 
